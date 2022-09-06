@@ -11,5 +11,6 @@
 # Bug Report: sulfonamides@163.com                                               #
 #================================================================================#
 #-1. Check packages
-if('rstan' %in% installed.packages()[, 'Package'])
-if('R6'    %in% installed.packages()[, 'Package'])
+pkgs = c('rstan', 'R6')
+for(i in 1:length(pkgs)){if(!(pkgs[i] %in% installed.packages()[, 'Package'])){install.packages(pkgs[i])}}
+
