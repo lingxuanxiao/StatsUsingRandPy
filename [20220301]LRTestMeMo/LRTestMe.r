@@ -47,7 +47,7 @@ b3 = loadingMatrix %*% covMatGenerator(a = sqrt(0.35), b = sqrt(0.35), c = 0) %*
 for(i in 1:6){colnames(simCovMatrix[[i]]) = paste0(rep(c('X', 'M', 'Y'), each = 3), rep(1:3, 3))}
 
 # 1.3 指定分析用模型
-anaMod = '
+anaMod  = '
 X =~ X1 + X2 + X3
 M =~ M1 + M2 + M3
 Y =~ Y1 + Y2 + Y3
@@ -75,11 +75,76 @@ M ~  a * X
 ab== 0'
 
 # 2. 编写反馈结果的函数
+# 特别需要注意的是，由于后续需要分析参数覆盖率，故这里直接给出了95% CI
+# 2.1 Wald Method
+# Wald检验（即Delta法），lavaan自带的默认检验方式
+waldMethod = function(data, alpha = 0.95){
+	fit  = sem(anaMod, data)
+	res1 = parameterEstimates(fit, level = 0.95 )		# 第一个结果用来计算参数覆盖率
+	res2 = parameterEstimates(fit, level = alpha)		# 第二个结果用来判定是否显著
+	a    = res1[which(res1$label ==  'a'), c('ci.lower', 'ci.upper')]
+	b    = res1[which(res1$label ==  'b'), c('ci.lower', 'ci.upper')]
+	ab   = res1[which(res1$label == 'ab'), c('ci.lower', 'ci.upper')]
+	test = (prod(res2[which(res2$label == 'ab'), c('ci.lower', 'ci.upper')])) > 0
+	return(list(a, b, ab, test))
+}
+# 2.2 MC Method
+# MC method取自Preacher和Selig（2012）的研究，该研究的思路是利用一阶泰勒展开近似的标准误（即Wald检验的标准误）不能很好反应乘积项的实际标准误/置信区间
+#     故采用模拟的乘积分布替代近似得到的乘积分布
+# 为了节约测试时间，这里仅抽样了1000个，可能对结果精度产生一定影响，但通常情况下这种影响不会很大
+mcMethod = function(data, alpha = 0.95, seed = NA, REP = 1000L){
+	if(!is.na(seed)) set.seed(seed)						# 设定随机数种子
+	fit   = sem(anaMod, data)
+	Sigma = vcov(fit)[c('a', 'b'), c('a', 'b')]
+	Mu    = coef(fit)[c('a', 'b')]
+	rnab  = rmvnorm(REP, mean = Mu, sigma = Sigma)		# 随机模拟	
+	a     = quantile(rnab[, 1], c(0.025, 0.975))		# 参数覆盖
+	b     = quantile(rnab[, 1], c(0.025, 0.975))
+	rab   = rnab[, 1] * rnab[, 2]
+	ab    = quantile(rab, c(0.025, 0.975))
+	test  = (prod(quantile(rab, c(0.5-alpha/2, 0.5+alpha/2)))) > 0
+	return(list(a, b, ab, test))
+}
+# 2.3 Bootstrap Method
+# 没啥好说的，这里直接调用了lavaan集成的部分，设定重抽样次数为1000
+bootMethod = function(data, alpha = 0.95, seed = NA, REP = 1000L, ci = 'perc'){
+	if(!is.na(seed)) set.seed(seed)						# 设定随机数种子
+	fit  = sem(anaMod, data, se = 'bootstrap', bootstrap = REP, parallel = 'snow', ncpus = 2)
+	res1 = parameterEstimates(fit, level =  0.95, boot.ci.type = ci)
+	res2 = parameterEstimates(fit, level = alpha, boot.ci.type = ci)
+	a    = res1[which(res1$label ==  'a'), c('ci.lower', 'ci.upper')]
+	b    = res1[which(res1$label ==  'b'), c('ci.lower', 'ci.upper')]
+	ab   = res1[which(res1$label == 'ab'), c('ci.lower', 'ci.upper')]
+	test = (prod(res2[which(res2$label == 'ab'), c('ci.lower', 'ci.upper')])) > 0	
+	return(list(a, b, ab, test))
+}
+# 2.4 Likelihood Ratio
+lrMethod = function(data, alpha = 0.95){
+	fit  = sem(anaMod,  data)
+	fita = sem(anaModA, data)
+	fitb = sem(anaModB, data)
+	res1 = parameterEstimates(fit, level =  0.95, boot.ci.type = ci)
+	chia = fitmeasures(fita, 'chisq')
+	chib = fitmeasures(fitb, 'chisq')
+	a    = res1[which(res1$label ==  'a'), c('ci.lower', 'ci.upper')]
+	b    = res1[which(res1$label ==  'b'), c('ci.lower', 'ci.upper')]
+	ab   = res1[which(res1$label == 'ab'), c('ci.lower', 'ci.upper')]
+	test = min(chia, chib) > qchisq(alpha, 1)
+	return(list(a, b, ab, test))
+}
+# 3. 生成样本
+simudataGenerator = function(n, COV, REP = 1000L, seed = NA){
+	if(!is.na(seed)) set.seed(seed)
+	dataSet = list()
+	for(i in 1:REP){
+		dataSet[[i]] = rmvnorm(n, mean = rep(0, 9), sigma = COV)
+		colnames(dataSet[[i]]) = colnames(COV)
+	}
+	return(dataSet)
+}
 
 
 
-
-# 分析方法：LR、Wald、非参Bootstrap、MC法
 
 
 
