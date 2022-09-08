@@ -43,8 +43,8 @@ a3 = loadingMatrix %*% covMatGenerator(a = 0         , b = sqrt(0.35), c = 0) %*
 b1 = loadingMatrix %*% covMatGenerator(a = sqrt(0.02), b = sqrt(0.02), c = 0) %*% t(loadingMatrix), 
 b2 = loadingMatrix %*% covMatGenerator(a = sqrt(0.15), b = sqrt(0.15), c = 0) %*% t(loadingMatrix), 
 b3 = loadingMatrix %*% covMatGenerator(a = sqrt(0.35), b = sqrt(0.35), c = 0) %*% t(loadingMatrix))
-# 填入变量名
-for(i in 1:6){colnames(simCovMatrix[[i]]) = paste0(rep(c('X', 'M', 'Y'), each = 3), rep(1:3, 3))}
+# 填入变量名，规范化对角线
+for(i in 1:6){colnames(simCovMatrix[[i]]) = paste0(rep(c('X', 'M', 'Y'), each = 3), rep(1:3, 3)); diag(simCovMatrix[[i]]) = rep(1, 9)}
 
 # 1.3 指定分析用模型
 anaMod  = '
@@ -142,12 +142,51 @@ simudataGenerator = function(n, COV, REP = 1000L, seed = NA){
 	}
 	return(dataSet)
 }
+# 计算样本相关矩阵的参数估计值和参数覆盖率
+parCorCov = function(dataSET, COV){
+	R = length(dataSET)
+	corEst = matrix(0, nrow = R, ncol = 36)
+	corCov = matrix(0, nrow = R, ncol = 36)
+	for(i in 1:R){
+		temp = cor(dataSET[[i]])
+		corEst[i, ] = temp[lower.tri(temp)]
+		l = 1
+		for(j in 1:8){
+			for(k in (j+1):9){
+				temp = as.numeric(cor.test(dataSET[[i]][, j], dataSET[[i]][, k])$conf)
+				if(COV[k, j] < temp[1]){
+					corEst[i, l] = -1
+				}else if(COV[k, j] > temp[2]){
+					corEst[i, l] = 1
+				}
+				l = l + 1
+			}
+		}
+	} 
+	corEst1 = apply(corEst, 2, mean)
+	corEst2 = apply(corEst, 2, sd)
+	corCov1 = matrix(0, nrow = 3, ncol = 36)
+	for(i in 1:36){
+		corCov1[1, i] = sum(corCov[, i] == -1)
+		corCov1[2, i] = sum(corCov[, i] ==  0)
+		corCov1[3, i] = sum(corCov[, i] ==  1)
+	}
+	return(rbind(corEst1, corEst2, corCov1))
+}
+R = length(dataSET)
 
 
 
+# Test Section
+dataSET = simudataGenerator(N[4], simCovMatrix$b1, seed = 12345678)
+# 
+parCorCov(dataSET, simCovMatrix$b1)
 
 
-
+waldMethod(dataSET[[1000]])
+mcMethod(dataSET[[1000]], seed = 87654321)
+bootMethod(dataSET[[1000]], seed = 87654321)
+lrMethod(dataSET[[1000]])
 
 
 
