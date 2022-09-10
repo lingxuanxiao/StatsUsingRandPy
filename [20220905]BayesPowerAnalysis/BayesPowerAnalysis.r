@@ -11,6 +11,7 @@
 # Bug Report: sulfonamides@163.com                                               #
 #================================================================================#
 #-1. Check packages
-pkgs = c('rstan', 'R6')
+pkgs = c('rstan', 'R6', 'hdrcde')
 for(i in 1:length(pkgs)){if(!(pkgs[i] %in% installed.packages()[, 'Package'])){install.packages(pkgs[i])}}
+
 

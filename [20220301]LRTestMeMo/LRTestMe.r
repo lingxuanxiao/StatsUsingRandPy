@@ -173,21 +173,93 @@ parCorCov = function(dataSET, COV){
 	}
 	return(rbind(corEst1, corEst2, corCov1))
 }
-R = length(dataSET)
+seedori = c(192344227, 341035713, 280982592, 926179503, 720910778, 914340145,
+            419363948, 336591901, 951924988, 987046882, 927706566, 525526090, 
+            575091066, 716769054, 414982471, 526993057, 643076979, 839461550, 
+            379981025, 428115374, 580266943, 672482624, 769206901, 497198341, 
+            788227345, 387718429, 131434086, 584514216, 805161358, 764859873)
+# 协方差矩阵的参数覆盖情况后补
+# 主循环
+R = 1000
+for(i in 1:5){
+	for(j in 1:6){
+		# 首先生成模拟数据
+		dataSET = simudataGenerator(N[i], simCovMatrix[[j]], seed = seedori[6*i+j-6], REP = R)
+		# 然后生成1000个在实际数据中使用的随机数
+		set.seed(seedori[6*i+j-6])
+		seeduse = floor(runif(R) * 9e8 + 1e8)
+		result1 = result2 = result3 = result4 = matrix(0, nrow = R, ncol = 8)
+		t0 = proc.time()
+		for(k in 1:R){
+			t00 = proc.time()
+			temp = waldMethod(dataSET[[k]])
+			t11 = proc.time()
+			result1[k, 1:2] = as.numeric(temp[[1]])
+			result1[k, 3:4] = as.numeric(temp[[2]])
+			result1[k, 5:6] = as.numeric(temp[[3]])
+			result1[k, 7  ] = as.numeric(temp[[4]])
+			result1[k, 8  ] = as.numeric((t11-t00))[3]
+		}
+		t1 = proc.time()
+		#result1[, 8] = rep((t1-t0)[3]/R, R)
+
+		t0 = proc.time()
+		for(k in 1:R){
+			t00 = proc.time()
+			temp = lrMethod(dataSET[[k]])
+			t11 = proc.time()
+			result2[k, 1:2] = as.numeric(temp[[1]])
+			result2[k, 3:4] = as.numeric(temp[[2]])
+			result2[k, 5:6] = as.numeric(temp[[3]])
+			result2[k, 7  ] = as.numeric(temp[[4]])
+			result2[k, 8  ] = as.numeric((t11-t00))[3]
+		}
+		t1 = proc.time()
+		#result2[, 8] = rep((t1-t0)[3]/R, R)
+
+		t0 = proc.time()
+		for(k in 1:R){
+			t00 = proc.time()
+			temp = mcMethod(dataSET[[k]], seed = seeduse[k])
+			t11 = proc.time()
+			result3[k, 1:2] = as.numeric(temp[[1]])
+			result3[k, 3:4] = as.numeric(temp[[2]])
+			result3[k, 5:6] = as.numeric(temp[[3]])
+			result3[k, 7  ] = as.numeric(temp[[4]])
+			result3[k, 8  ] = as.numeric((t11-t00))[3]
+		}
+		t1 = proc.time()
+		#result3[, 8] = rep((t1-t0)[3]/R, R)
+
+		t0 = proc.time()
+		for(k in 1:R){
+			t00 = proc.time()
+			temp = bootMethod(dataSET[[k]], seed = seeduse[k])
+			t11 = proc.time()
+			result4[k, 1:2] = as.numeric(temp[[1]])
+			result4[k, 3:4] = as.numeric(temp[[2]])
+			result4[k, 5:6] = as.numeric(temp[[3]])
+			result4[k, 7  ] = as.numeric(temp[[4]])
+			result4[k, 8  ] = as.numeric((t11-t00))[3]
+		}
+		t1 = proc.time()
+		#result4[, 8] = rep((t1-t0)[3]/R, R)		
+	result = cbind(result1, result2, result3, result4)
+	write.csv(result, paste0('C:\\Simulate\\N_', formatC(N[i], width = 4, flag = '0'), '_COV_', j, '.csv'))
+	}
+}
 
 
 
 # Test Section
-dataSET = simudataGenerator(N[4], simCovMatrix$b1, seed = 12345678)
+#dataSET = simudataGenerator(N[4], simCovMatrix$b1, seed = 12345678)
 # 
-parCorCov(dataSET, simCovMatrix$b1)
-
-
-waldMethod(dataSET[[1000]])
-mcMethod(dataSET[[1000]], seed = 87654321)
-bootMethod(dataSET[[1000]], seed = 87654321)
-lrMethod(dataSET[[1000]])
-
+#parCorCov(dataSET, simCovMatrix$b1)
+#
+#waldMethod(dataSET[[1000]])
+#mcMethod(dataSET[[1000]], seed = 87654321)
+#bootMethod(dataSET[[1000]], seed = 87654321)
+#lrMethod(dataSET[[1000]])
 
 
 
