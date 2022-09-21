@@ -18,7 +18,7 @@ Kazuha_Yae
 
 ## 一、贝叶斯估计与贝叶斯假设检验
 
-#### &emsp;&ensp;1. 贝叶斯定理、贝叶斯估计
+### &emsp;&ensp;1. 贝叶斯定理、贝叶斯估计
 
 &emsp;&emsp;首先，我们默认读者已经具备了基础的概统知识。根据条件概率与联合概率之间的关系，容易有：
 
@@ -71,7 +71,7 @@ $$
 | 区间估计 | 最大后验密度区间 | 满足置信度 $1-\alpha$ 的最小（短）区间                           |
 | 区间估计 | 等尾区间     | 后验分布的 $\frac{\alpha}{2}$ 与 $1-\frac{\alpha}{2}$ 分位点 |
 
-#### &emsp;&ensp;2. 贝叶斯假设检验
+### &emsp;&ensp;2. 贝叶斯假设检验
 
 &emsp;&emsp;考虑来自总体密度函数为 $f(x;\theta)$ 的样本 $\mathbf{x}=(x_1,x_2,...,x_n)$，$\theta \in \Theta$，$\Theta_0$ 和 $\Theta_1$ 是对参数空间 $\Theta$ 的一个划分，待检验假设为：
 
@@ -125,15 +125,58 @@ $$
 
 其中 $\overline{ROPE}$ 是 $ROPE$ 在参数空间 $\Theta$ 中的补集。关于贝叶斯假设检验的更多内容，可以参考[Makowski等人2019年的研究](https://www.frontiersin.org/articles/10.3389/fpsyg.2019.02767/full)。
 
-#### &emsp;&ensp;3. 对bayestestR 与 BayesFactor 的简单介绍
+### &emsp;&ensp;3. 对bayestestR 与 BayesFactor 的简单介绍
 
 &emsp;&emsp;在R中有许多帮助研究者完成贝叶斯分析的R包，其中较为易用的有bayestestR和BayesFactor，这两个也是本教程主要使用的R包。
 
-#### &emsp;&ensp;4. rstan与概率编程
+&emsp;&emsp;其中，BayesFactor包提供了计算单样本和配对样本t检验、独立样本t检验、ANOVA、回归等情形下的Bayes因子。BayesFactor包中主要的函数及其功能可以参考下表：
+
+| 函数                 | 大致功能                            |
+|:------------------:|:-------------------------------:|
+| ttestBF            | 计算各类t检验的Bayes因子                 |
+| anovaBF            | 计算方差分析的Bayes因子                  |
+| regressionBF       | 计算线性回归模型的Bayes因子                |
+| generalTestBF      | 比较全模型和各类嵌套模型的Bayes因子            |
+| lmBF               | 计算线性模型（ANOVA或回归）的Bayes因子        |
+| correlationBF      | 计算线性相关系数的Bayes因子                |
+| proportionBF       | 计算单比例检验的Bayes因子                 |
+| contingencyTableBF | 计算列联表的Bayes因子                   |
+| posterior          | 对BFBayesFactor类得到的后验分布抽样        |
+| recompute          | 重新计算BFBayesFactor类的Bayes因子或MCMC |
+| compare            | 比较模型                            |
+
+关于BayesFactor包的更多内容可以参考[这里](https://richarddmorey.github.io/BayesFactor/)（这里需要提醒注意的是，这个文档中有一些内容是基于更古老版本的说明，如果测试样例报错的话，可以使用万能的help大法直接查找对应函数的帮助文档）。
+
+&emsp;&emsp;bayestestR包则提供了一组可以用以描述后验分布的方便函数。主要包括下述功能：
+
+| 函数             | 用途          | 说明                        |
+|:--------------:|:-----------:|:-------------------------:|
+| mean           | 后验点估计       | 后验均值估计                    |
+| median         | 后验点估计       | 后验中位数估计                   |
+| map_estimate   | 后验点估计       | 最大后验估计                    |
+| point_estimate | 后验点估计       | 后验点估计（包括上面三种）             |
+| hdi            | 后验区间估计      | 最大密度区间                    |
+| spi            | 后验区间估计      | 最大密度区间（另一种估计方法）           |
+| eti            | 后验区间估计      | 等尾区间                      |
+| ci             | 后验区间估计      | 后验区间估计（包括上面三种）            |
+| p_direction    | 基于简单假设的p值   | 方向概率                      |
+| p_pointnull    | 基于简单假设的p值   | 最大后验相关p值                  |
+| bf_pointnull   | 基于简单假设的p值   | 贝叶斯因子（Savage-Dickey密度比形式） |
+| p_rope         | 基于ROPE假设的p值 | 基于ROPE的p值                 |
+| bf_rope        | 基于ROPE假设的p值 | 基于ROPE的贝叶斯因子              |
+| p_significance | 基于ROPE假设的p值 | ROPE两侧中面积较大一侧对应的p值        |
+
+关于bayestestR包的更多内容可以参考[这里](https://easystats.github.io/bayestestR/)。另外，值得一提的是，bayestestR包针对目前较为流行的贝叶斯分析包，如rstanarm、brms以及BayesFactor等都有较好的支持。
+
+### &emsp;&ensp;4. rstan与概率编程
+
+&emsp;&emsp;上一节提到的诸多方便软件包能够帮助研究者实现日常生活中遇到的大多数需要使用贝叶斯估计或贝叶斯假设检验的情形，但这些软件包大多默认了一些“潜规则”，这些潜规则大多是关于先验分布（特别是先验分布型态）的假定。例如：BayesFactor包中的ttestBF函数假定了方差的先验分布是Jeffreys先验而标准化效应量（Cohen's d）的先验分布是位置参数为0，尺度参数为 $\frac{\sqrt{2}}{2}$ 的柯西分布。诚然，这种关于先验分布的假定在多数情况下遵循了某种“学科共识”，并且在样本量足够的情况下，先验分布的形状实际上对结果的影响不大。
+
+
 
 ## 二、贝叶斯估计与假设检验中的样本量规划问题
 
-#### &emsp;&ensp;1. 统计检验力的扩展
+### &emsp;&ensp;1. 统计检验力的扩展
 
 https://easystats.github.io/bayestestR/
 
